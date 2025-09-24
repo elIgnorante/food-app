@@ -1,6 +1,7 @@
 
 import CustomButton from '@/components/CustomButton'
 import CustomInput from '@/components/CustomInput'
+import { createUser } from '@/lib/appwrite'
 import { Link, router } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
@@ -13,25 +14,27 @@ const SignUp = () => {
     password: '',
   });
 
-  const submit = () => {
-    if (!form.name || !form.email || !form.password) return Alert.alert('Error', 'Por favor completa todos los campos');
+  const submit = async () => {
+    const { name, email, password } = form;
+
+    if (!name || !email || !password) return Alert.alert('Error', 'Por favor completa todos los campos');
 
     setIsSubmitting(true);
 
     try {
-      // TODO: call api sign up
-
-      Alert.alert('Success', 'Registro exitoso');
+      await createUser({
+        email, password, name
+      })
       router.replace('/');
-    } catch (error) {
-      Alert.alert('Error', 'Hubo un error al registrarse');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <View className='gap-10 bg-white rounded-lg p-5 mt-5'>
+    <View className='gap-9 bg-white rounded-lg p-5 mt-5'>
 
 
       <CustomInput
@@ -61,7 +64,7 @@ const SignUp = () => {
       />
 
 
-      <View className='flex justify-center mt-5 flex-row gap-2'>
+      <View className='flex justify-center  flex-row gap-2'>
         <Text className="base-regular text-gray-100">
           ¿Ya tienes una cuenta?
         </Text>

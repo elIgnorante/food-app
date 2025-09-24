@@ -1,6 +1,7 @@
 
 import CustomButton from '@/components/CustomButton'
 import CustomInput from '@/components/CustomInput'
+import { signIn } from '@/lib/appwrite'
 import { Link, router } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
@@ -12,18 +13,20 @@ const SignIn = () => {
     password: '',
   });
 
-  const submit = () => {
-    if (!form.email || !form.password) return Alert.alert('Error', 'Por favor completa todos los campos');
+  const submit = async () => {
+    const { email, password} = form;
+    if (!email || !password) return Alert.alert('Error', 'Por favor completa todos los campos');
 
     setIsSubmitting(true);
 
     try {
-      // TODO: call api
+      await signIn({
+        email, password
+      });
 
-      Alert.alert('Success', 'Sesión iniciada correctamente');
       router.replace('/');
-    } catch (error) {
-      Alert.alert('Error', 'Hubo un error al iniciar sesión');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
     } finally {
       setIsSubmitting(false);
     }
