@@ -100,6 +100,31 @@ export const getCurrentUser = async () => {
     }
 }
 
+export const updateUserProfile = async (
+    userId: string,
+    data: Partial<{
+        name: string;
+        email: string;
+        avatar: string;
+        phone: string;
+        address1: string;
+        address2: string;
+    }>,
+) => {
+    try {
+        const updatedUser = await databases.updateDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.userCollectionId,
+            userId,
+            data,
+        );
+
+        return updatedUser;
+    } catch (e) {
+        throw new Error(e as string);
+    }
+};
+
 export const getMenu = async ({ category, query }: GetMenuParams) => {
     try {
         const queries: string[] = [];
