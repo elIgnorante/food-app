@@ -2,13 +2,55 @@ import CartButton from "@/components/CartButton";
 import { images, offers } from "@/constants";
 import useAuthStore from "@/store/auth.store";
 import cn from "clsx";
-import { Fragment } from "react";
+import * as Location from "expo-location";
+import { Fragment, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 
 export default function Index() {
   const { user } = useAuthStore();
+  const [country, setCountry] = useState("México");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status !== Location.PermissionStatus.GRANTED) {
+          if (isMounted) {
+            setCountry("Permiso denegado");
+          }
+          return;
+        }
+
+        const currentPosition = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Lowest,
+        });
+
+        const [address] = await Location.reverseGeocodeAsync({
+          latitude: currentPosition.coords.latitude,
+          longitude: currentPosition.coords.longitude,
+        });
+
+        if (isMounted && address?.country) {
+          setCountry(address.country);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setCountry("Ubicación no disponible");
+        }
+      }
+    };
+
+    fetchLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -53,7 +95,7 @@ export default function Index() {
             <View className="flex-start">
               <Text className="small-bold text-primary">ENTREGAR A</Text>
               <TouchableOpacity className="flex-center flex-row gap-x-1 mt-0.5">
-                <Text className="paragraph-bold text-dark-100">Mexico</Text>
+                <Text className="paragraph-bold text-dark-100">{country}</Text>
                 <Image source={images.arrowDown} className="size-3" resizeMode="contain" />
               </TouchableOpacity>
             </View>
