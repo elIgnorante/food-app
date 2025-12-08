@@ -1,6 +1,12 @@
 import { images } from "@/constants";
-import { getCurrentUser, signOut, updateUserProfile } from "@/lib/appwrite";
+import {
+  getCurrentUser,
+  signOut,
+  updateUserProfile,
+  uploadUserAvatar,
+} from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -29,6 +35,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [form, setForm] = useState<ProfileForm>({
     name: "",
@@ -105,6 +112,57 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarCapture = async () => {
+    if (!user?.$id) {
+      Alert.alert("Error", "No se pudo identificar el usuario.");
+      return;
+    }
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
+      Alert.alert(
+        "Permiso requerido",
+        "Necesitamos acceso a la cámara para actualizar tu foto de perfil.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const asset = result.assets[0];
+
+    setIsUploadingAvatar(true);
+    try {
+      const avatarUrl = await uploadUserAvatar(user.$id, {
+        uri: asset.uri,
+        name: asset.fileName ?? `avatar-${Date.now()}.jpg`,
+        type: asset.mimeType ?? "image/jpeg",
+        size: asset.fileSize ?? null,
+      });
+
+      const updatedUser = { ...user, avatar: avatarUrl };
+      setUser(updatedUser);
+      await useAuthStore.getState().fetchAuthenticatedUser();
+      Alert.alert("Foto actualizada", "Tu foto de perfil fue actualizada.");
+    } catch (error) {
+      console.log(error);
+      Alert.alert(
+        "Error",
+        "No pudimos actualizar la foto de perfil. Intenta de nuevo.",
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const renderProfileField = (
     label: string,
     value: string,
@@ -144,12 +202,25 @@ const Profile = () => {
     <SafeAreaView className="flex-1 bg-[#F9F9FB]">
       <ScrollView contentContainerClassName="px-5 pb-10">
         <View className="items-center mt-8">
-          <View className="profile-avatar">
-            <Image source={images.avatar} className="size-full rounded-full" />
-            <View className="profile-edit">
-              <Image source={images.pencil} className="size-3.5" resizeMode="contain" />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleAvatarCapture}
+            disabled={isUploadingAvatar}
+          >
+            <View className="profile-avatar">
+              <Image
+                source={user?.avatar ? { uri: user.avatar } : images.avatar}
+                className="size-full rounded-full"
+              />
+              <View className="profile-edit">
+                {isUploadingAvatar ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Image source={images.pencil} className="size-3.5" resizeMode="contain" />
+                )}
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <Text className="h3-bold mt-4 text-dark-100">{user?.name ?? "Usuario"}</Text>
           <Text className="body-regular text-gray-500 mt-1">{user?.email ?? ""}</Text>
