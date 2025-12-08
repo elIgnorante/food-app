@@ -125,6 +125,38 @@ export const updateUserProfile = async (
     }
 };
 
+type AvatarFile = {
+    uri: string;
+    name?: string;
+    type?: string;
+    size?: number | null;
+};
+
+export const uploadUserAvatar = async (userId: string, file: AvatarFile) => {
+    const fileToUpload = {
+        name: file.name ?? `avatar-${Date.now()}.jpg`,
+        type: file.type ?? "image/jpeg",
+        uri: file.uri,
+        size: file.size ?? undefined,
+    };
+
+    try {
+        const uploadedFile = await storage.createFile(
+            appwriteConfig.bucketId,
+            ID.unique(),
+            fileToUpload,
+        );
+
+        const avatarUrl = storage.getFileViewURL(appwriteConfig.bucketId, uploadedFile.$id);
+
+        await updateUserProfile(userId, { avatar: avatarUrl });
+
+        return avatarUrl;
+    } catch (e) {
+        throw new Error(e as string);
+    }
+};
+
 export const getMenu = async ({ category, query }: GetMenuParams) => {
     try {
         const queries: string[] = [];
